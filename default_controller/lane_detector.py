@@ -11,6 +11,7 @@ class LaneDetector:
     def detect_lane(self, image: np.ndarray):
         self.original_image_array = image.copy()
         self.image_array = image.copy()
+
         self._blur_image()
         self._get_grayscale_image()
         self._detect_edges()
@@ -64,21 +65,25 @@ class LaneDetector:
         self.image_array = cv2.bitwise_and(self.image_array, mask)
 
     def _hough_line(self):
-        # TODO: hyperparameters
         self.hough_lines = cv2.HoughLinesP(self.image_array,
-                                           rho=0.8,
+                                           rho=1,
                                            theta=np.pi/180,
-                                           threshold=5,
-                                           minLineLength=50,
-                                           maxLineGap=200,
+                                           threshold=30,
+                                           minLineLength=10,
+                                           maxLineGap=20,
                                            )
+        print(len(self.hough_lines))
         if self.hough_lines is None:
             return
+        self.__draw_lines()
+
+    def __draw_lines(self):
         for line in self.hough_lines:
-            for x1, y1, x2, y2 in line:
-                if x1 == x2 or y1 == y2:
-                    continue
-                cv2.line(self.original_image_array, (x1, x2), (y1, y2), RED, 2)
+                    for x1, y1, x2, y2 in line:
+                        if x1 == x2 or y1 == y2:
+                            continue
+                        cv2.line(self.original_image_array,
+                                 (x1, y1), (x2, y2), RED, 1)
 
     def _get_lane_candidates(self):
         pass
