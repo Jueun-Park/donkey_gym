@@ -13,6 +13,7 @@ class LaneDetector:
     def detect_lane(self, image: np.ndarray):
         self.original_image_array = image.copy()
         self.image_array = image.copy()
+        self.angle = None
 
         self._blur_image()
         self._get_grayscale_image()
@@ -20,14 +21,12 @@ class LaneDetector:
         self._get_roi_image()
         self._hough_line()
         if self.hough_lines is None:
-           return False, None, None  # not done
+           return False, None  # not done
         self._get_lane_candidates()
         self._intersection_of_lanes()
         self._get_angle_error()
 
-        angle = None
-        intersept = None
-        return True, intersept, angle
+        return True, self.angle
 
     def _blur_image(self):
         kernel_size = 3
@@ -50,7 +49,7 @@ class LaneDetector:
         dx1 = int(1 * xsize)
         dx2 = int(0.675 * xsize)
         dy = int(0.475 * ysize)
-        dy2 = int(0.2 * ysize)
+        dy2 = int(0.1 * ysize)
         vertices = np.array([[(dx1, ysize - dy2),
                               (dx2, dy),
                               (xsize - dx2, dy),
@@ -69,8 +68,8 @@ class LaneDetector:
         self.hough_lines = cv2.HoughLinesP(self.image_array,
                                            rho=1,
                                            theta=np.pi/180,
-                                           threshold=30,
-                                           minLineLength=10,
+                                           threshold=10,
+                                           minLineLength=42,
                                            maxLineGap=20,
                                            )
         if self.hough_lines is None:
@@ -112,19 +111,19 @@ class LaneDetector:
         return (y1 - y2) / (x1 - x2)
 
     def _intersection_of_lanes(self):
-        r_m, r_c = self.__one_line_linear_regression(self.r_x_points, self.r_y_points)
-        l_m, l_c = self.__one_line_linear_regression(self.l_x_points, self.l_y_points)
-        a = np.array([[-r_m, 1], [-l_m, 1]])
+        self.r_m, r_c = self.__one_line_linear_regression(self.r_x_points, self.r_y_points)
+        self.l_m, l_c = self.__one_line_linear_regression(self.l_x_points, self.l_y_points)
+        a = np.array([[-self.r_m, 1], [-self.l_m, 1]])
         b = np.array([r_c, l_c])
         self.intersection_point = np.linalg.solve(a, b)
         self.intersection_point = tuple(int(i) for i in self.intersection_point)
-        print(self.intersection_point)
-        cv2.circle(img=self.original_image_array,
-                    center=self.intersection_point,
-                    radius=1,
-                    color=GREEN,
-                    thickness=3,
-                    )
+        if self.intersection_point[0] > 0 and self.intersection_point[1] > 0:
+            cv2.circle(img=self.original_image_array,
+                        center=self.intersection_point,
+                        radius=1,
+                        color=GREEN,
+                        thickness=3,
+                        )
 
     def __one_line_linear_regression(self, x_points, y_points):
         A = np.vstack([x_points, np.ones(len(x_points))]).T
@@ -132,13 +131,26 @@ class LaneDetector:
         return m, c
 
     def _get_angle_error(self):
-        pass
+        xsize = self.image_array.shape[1]
+        ysize = self.image_array.shape[0]
+        dist_to_baseline = self.intersection_point[0] - xsize/2
+        dist_to_bottom = ysize - self.intersection_point[1]
+        self.angle = np.arctan(dist_to_baseline / dist_to_bottom)
+        cv2.line(self.original_image_array, (int(xsize/2), 0), (int(xsize/2), ysize), RED, 1)
 
 
 if __name__ == "__main__":
     image = cv2.imread("default_controller/sample0_0.png", cv2.IMREAD_COLOR)
     detector = LaneDetector()
-    detector.detect_lane(image)
+    print(detector.detect_lane(image))
+    # conda install -c conda-forge opencv=4.1.0
+    cv2.imshow('processed', detector.image_array)
+    cv2.imshow('original', detector.original_image_array)
+    cv2.waitKey(0)
+
+    image = cv2.imread("default_controller/sample0_29.png", cv2.IMREAD_COLOR)
+    detector = LaneDetector()
+    print(detector.detect_lane(image))
     # conda install -c conda-forge opencv=4.1.0
     cv2.imshow('processed', detector.image_array)
     cv2.imshow('original', detector.original_image_array)
