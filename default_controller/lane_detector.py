@@ -1,17 +1,23 @@
 import cv2
 import numpy as np
 
+RED = (0, 0, 255)
+
 
 class LaneDetector:
     def __init__(self):
         pass
 
     def detect_lane(self, image: np.ndarray):
-        self.image_array = image
-        self._get_roi_image()
+        self.original_image_array = image.copy()
+        self.image_array = image.copy()
         self._blur_image()
+        self._get_grayscale_image()
         self._detect_edges()
+        self._get_roi_image()
         self._hough_line()
+        if self.hough_lines is None:
+           return False, None, None  # not done
         self._get_lane_candidates()
         self._lines_linear_regression()
         self._get_bird_eye_view()
@@ -21,17 +27,58 @@ class LaneDetector:
         intersept = None
         return True, intersept, angle
 
-    def _get_roi_image(self):
-        pass
-
     def _blur_image(self):
-        pass
+        kernel_size = 3
+        self.image_array = cv2.GaussianBlur(
+            self.image_array, (kernel_size, kernel_size), 0)
+
+    def _get_grayscale_image(self):
+        self.image_array = cv2.cvtColor(self.image_array, cv2.COLOR_BGR2GRAY)
 
     def _detect_edges(self):
-        pass
+        self.image_array = cv2.Canny(self.image_array,
+                                     50,
+                                     150,
+                                     )
+
+    def _get_roi_image(self):
+        xsize = self.image_array.shape[1]
+        ysize = self.image_array.shape[0]
+        mask = np.zeros_like(self.image_array)
+        dx1 = int(1 * xsize)
+        dx2 = int(0.675 * xsize)
+        dy = int(0.475 * ysize)
+        dy2 = int(0.2 * ysize)
+        vertices = np.array([[(dx1, ysize - dy2),
+                              (dx2, dy),
+                              (xsize - dx2, dy),
+                              (xsize - dx1, ysize - dy2)]],
+                            dtype=np.int32)
+
+        if len(self.image_array.shape) > 2:
+            channel_count = self.image_array.shape[2]
+            ignore_mask_color = (255,) * channel_count
+        else:
+            ignore_mask_color = 255
+        cv2.fillPoly(mask, vertices, ignore_mask_color)
+        self.image_array = cv2.bitwise_and(self.image_array, mask)
 
     def _hough_line(self):
-        pass
+        # TODO: hyperparameters
+        self.hough_lines = cv2.HoughLinesP(self.image_array,
+                                           rho=0.8,
+                                           theta=np.pi/180,
+                                           threshold=5,
+                                           minLineLength=50,
+                                           maxLineGap=200,
+                                           )
+        if self.hough_lines is None:
+            return
+        for line in self.hough_lines:
+            for x1, y1, x2, y2 in line:
+                if x1 == x2 or y1 == y2:
+                    continue
+                cv2.line(self.original_image_array, (x1, x2), (y1, y2), RED, 2)
 
     def _get_lane_candidates(self):
         pass
@@ -47,4 +94,10 @@ class LaneDetector:
 
 
 if __name__ == "__main__":
-    pass
+    image = cv2.imread("default_controller/sample0_0.png", cv2.IMREAD_COLOR)
+    detector = LaneDetector()
+    detector.detect_lane(image)
+    # conda install -c conda-forge opencv=4.1.0
+    cv2.imshow('processed', detector.image_array)
+    cv2.imshow('original', detector.original_image_array)
+    cv2.waitKey(0)
