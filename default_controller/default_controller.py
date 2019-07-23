@@ -16,7 +16,7 @@ MAX_TIME_STEPS = 1000
 def simulate(env):
     detector = LaneDetector()
     for episode in range(NUM_EPISODES):
-        obv = env.reset()
+        obv = env.reset()  # TODO: reset delay
 
         for t in range(MAX_TIME_STEPS):
             is_okay, angle_error = detector.detect_lane(obv)
@@ -30,7 +30,7 @@ def simulate(env):
                 break
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
-        cv2.destroyAllWindows()
+    cv2.destroyAllWindows()
 
 
 if __name__ == "__main__":
