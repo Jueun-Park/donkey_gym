@@ -3,6 +3,7 @@ import numpy as np
 
 RED = (0, 0, 255)
 BLUE = (255, 0, 0)
+GREEN = (0, 255, 0)
 
 
 class LaneDetector:
@@ -21,9 +22,8 @@ class LaneDetector:
         if self.hough_lines is None:
            return False, None, None  # not done
         self._get_lane_candidates()
-        self._lines_linear_regression()
-        self._get_bird_eye_view()
-        self._get_angle_and_intersept
+        self._intersection_of_lanes()
+        self._get_angle_error()
 
         angle = None
         intersept = None
@@ -88,12 +88,18 @@ class LaneDetector:
     def _get_lane_candidates(self):
         self.right = []
         self.left = []
+        self.r_x_points, self.r_y_points = [], []
+        self.l_x_points, self.l_y_points = [], []
         for x1, y1, x2, y2 in self.hough_lines[:, 0]:
             m = self.__slope(x1, y1, x2, y2)
             if m >= 0:
                 self.right.append([[x1, y1, x2, y2]])
+                self.r_x_points.append(x1, x2)
+                self.r_y_points.append(y1, y2)
             else:
                 self.left.append([[x1, y1, x2, y2]])
+                self.l_x_points.append(x1, x2)
+                self.l_y_points.append(y1, y2)
 
         self.__draw_lines(self.right, RED)
         self.__draw_lines(self.left, BLUE)
@@ -101,13 +107,25 @@ class LaneDetector:
     def __slope(self, x1, y1, x2, y2):
         return (y1 - y2) / (x1 - x2)
 
-    def _lines_linear_regression(self):
-        pass
+    def _intersection_of_lanes(self):
+        r_m, r_c = self.__one_line_linear_regression(self.r_x_points, self.r_y_points)
+        l_m, l_c = self.__one_line_linear_regression(self.l_x_points, self.l_y_points)
+        a = np.array([[r_m, 1], [l_m, 1]])  # flip by x-axis
+        b = np.array([-r_c, -l_c])
+        self.intersection_point = np.linalg.solve(a, b)
+        cv2.circle(img=self.original_image_array,
+                    center=self.intersection_point,
+                    radius=1,
+                    color=GREEN,
+                    thickness=1,
+                    )
 
-    def _get_bird_eye_view(self):
-        pass
+    def __one_line_linear_regression(self, x_points, y_points):
+        A = np.vstack([x_points, np.ones(len(x_points))]).T
+        m, c = np.linalg.lstsq(A, y_points, rcond=None)[0]
+        return m, c
 
-    def _get_angle_and_intersept(self):
+    def _get_angle_error(self):
         pass
 
 
