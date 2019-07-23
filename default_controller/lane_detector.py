@@ -78,7 +78,6 @@ class LaneDetector:
 
     def __draw_lines(self, lines, color):
         for line in lines:
-            print(line)
             for x1, y1, x2, y2 in line:
                 if x1 == x2 or y1 == y2:
                     continue
@@ -94,12 +93,17 @@ class LaneDetector:
             m = self.__slope(x1, y1, x2, y2)
             if m >= 0:
                 self.right.append([[x1, y1, x2, y2]])
-                self.r_x_points.append(x1, x2)
-                self.r_y_points.append(y1, y2)
+                self.r_x_points.append(x1)
+                self.r_x_points.append(x2)
+                self.r_y_points.append(y1)
+                self.r_y_points.append(y2)
+
             else:
                 self.left.append([[x1, y1, x2, y2]])
-                self.l_x_points.append(x1, x2)
-                self.l_y_points.append(y1, y2)
+                self.l_x_points.append(x1)
+                self.l_x_points.append(x2)
+                self.l_y_points.append(y1)
+                self.l_y_points.append(y2)
 
         self.__draw_lines(self.right, RED)
         self.__draw_lines(self.left, BLUE)
@@ -110,14 +114,16 @@ class LaneDetector:
     def _intersection_of_lanes(self):
         r_m, r_c = self.__one_line_linear_regression(self.r_x_points, self.r_y_points)
         l_m, l_c = self.__one_line_linear_regression(self.l_x_points, self.l_y_points)
-        a = np.array([[r_m, 1], [l_m, 1]])  # flip by x-axis
-        b = np.array([-r_c, -l_c])
+        a = np.array([[-r_m, 1], [-l_m, 1]])
+        b = np.array([r_c, l_c])
         self.intersection_point = np.linalg.solve(a, b)
+        self.intersection_point = tuple(int(i) for i in self.intersection_point)
+        print(self.intersection_point)
         cv2.circle(img=self.original_image_array,
                     center=self.intersection_point,
                     radius=1,
                     color=GREEN,
-                    thickness=1,
+                    thickness=3,
                     )
 
     def __one_line_linear_regression(self, x_points, y_points):
