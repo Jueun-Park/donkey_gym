@@ -13,7 +13,8 @@ class LaneDetector:
     def detect_lane(self, image: np.ndarray):
         self.original_image_array = image.copy()
         self.image_array = image.copy()
-        self.angle = None
+        self.angle = 0
+        self.done = True
 
         self._blur_image()
         self._get_grayscale_image()
@@ -21,12 +22,12 @@ class LaneDetector:
         self._get_roi_image()
         self._hough_line()
         if self.hough_lines is None:
-           return False, None  # not done
+           return False, self.angle  # not done
         self._get_lane_candidates()
         self._intersection_of_lanes()
         self._get_angle_error()
 
-        return True, self.angle
+        return self.done, self.angle
 
     def _blur_image(self):
         kernel_size = 3
@@ -46,14 +47,14 @@ class LaneDetector:
         xsize = self.image_array.shape[1]
         ysize = self.image_array.shape[0]
         mask = np.zeros_like(self.image_array)
-        dx1 = int(1 * xsize)
-        dx2 = int(0.675 * xsize)
-        dy = int(0.475 * ysize)
-        dy2 = int(0.1 * ysize)
-        vertices = np.array([[(dx1, ysize - dy2),
-                              (dx2, dy),
-                              (xsize - dx2, dy),
-                              (xsize - dx1, ysize - dy2)]],
+        dx_bottom = int(0 * xsize)
+        dx_up = int(0.15 * xsize)
+        dy_bottom = int(0.1 * ysize)
+        dy_up = int(0.55 * ysize)
+        vertices = np.array([[(xsize - dx_bottom, ysize - dy_bottom),
+                              (xsize - dx_up, dy_up),
+                              (dx_up, dy_up),
+                              (dx_bottom, ysize - dy_bottom)]],
                             dtype=np.int32)
 
         if len(self.image_array.shape) > 2:
@@ -68,8 +69,8 @@ class LaneDetector:
         self.hough_lines = cv2.HoughLinesP(self.image_array,
                                            rho=1,
                                            theta=np.pi/180,
-                                           threshold=10,
-                                           minLineLength=42,
+                                           threshold=25,
+                                           minLineLength=20,
                                            maxLineGap=20,
                                            )
         if self.hough_lines is None:
@@ -140,7 +141,7 @@ class LaneDetector:
 
 
 if __name__ == "__main__":
-    image = cv2.imread("default_controller/sample0_0.png", cv2.IMREAD_COLOR)
+    image = cv2.imread("default_controller/sample0_7.png", cv2.IMREAD_COLOR)
     detector = LaneDetector()
     print(detector.detect_lane(image))
     # conda install -c conda-forge opencv=4.1.0
