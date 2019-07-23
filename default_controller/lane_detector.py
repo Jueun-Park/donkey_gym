@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 
 RED = (0, 0, 255)
+BLUE = (255, 0, 0)
 
 
 class LaneDetector:
@@ -72,21 +73,33 @@ class LaneDetector:
                                            minLineLength=10,
                                            maxLineGap=20,
                                            )
-        print(len(self.hough_lines))
         if self.hough_lines is None:
             return
-        self.__draw_lines()
 
-    def __draw_lines(self):
-        for line in self.hough_lines:
-                    for x1, y1, x2, y2 in line:
-                        if x1 == x2 or y1 == y2:
-                            continue
-                        cv2.line(self.original_image_array,
-                                 (x1, y1), (x2, y2), RED, 1)
+    def __draw_lines(self, lines, color):
+        for line in lines:
+            print(line)
+            for x1, y1, x2, y2 in line:
+                if x1 == x2 or y1 == y2:
+                    continue
+                cv2.line(self.original_image_array,
+                            (x1, y1), (x2, y2), color, 2)
 
     def _get_lane_candidates(self):
-        pass
+        self.right = []
+        self.left = []
+        for x1, y1, x2, y2 in self.hough_lines[:, 0]:
+            m = self.__slope(x1, y1, x2, y2)
+            if m >= 0:
+                self.right.append([[x1, y1, x2, y2]])
+            else:
+                self.left.append([[x1, y1, x2, y2]])
+
+        self.__draw_lines(self.right, RED)
+        self.__draw_lines(self.left, BLUE)
+
+    def __slope(self, x1, y1, x2, y2):
+        return (y1 - y2) / (x1 - x2)
 
     def _lines_linear_regression(self):
         pass
