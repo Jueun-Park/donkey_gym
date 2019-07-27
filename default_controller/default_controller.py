@@ -4,6 +4,7 @@ import gym
 import donkey_gym
 import time
 import random
+import numpy as np
 
 import cv2
 from simple_pid import PID
@@ -13,8 +14,13 @@ NUM_EPISODES = 1
 MAX_TIME_STEPS = 10000000
 
 # TODO: hyperparameters
-controller = PID(Kp=-2.5,
-                Ki=10.0,
+steer_controller = PID(Kp=-3.0,
+                Ki=0.0,
+                Kd=0.0,
+                output_limits=(-1, 1),
+                )
+speed_controller = PID(Kp=-1.0,
+                Ki=0.0,
                 Kd=0.0,
                 output_limits=(-1, 1),
                 )
@@ -28,9 +34,10 @@ def simulate(env):
 
         for t in range(MAX_TIME_STEPS):
             is_okay, angle_error = detector.detect_lane(obv)
-            steer = controller(angle_error)
+            steer = steer_controller(angle_error)
             print(steer)
-            action = (steer, 1)
+            speed = speed_controller(np.abs(steer)) + 0.5
+            action = (steer, speed)
             obv, reward, done, _ = env.step(action)
             obv = cv2.cvtColor(obv, cv2.COLOR_RGB2BGR)
 
