@@ -8,12 +8,20 @@ GREEN = (0, 255, 0)
 
 class LaneDetector:
     def __init__(self):
-        pass
+        self.angle = 0
+        self.previous_angles = []
+
+    def __insert_previous_angle(self):
+        max_size = 3
+        if len(self.previous_angles) >= max_size:
+            del self.previous_angles[-1]
+        self.previous_angles.append(self.angle)
 
     def detect_lane(self, image: np.ndarray):
         self.original_image_array = image.copy()
         self.image_array = image.copy()
-        self.angle = 0
+        self.right = []
+        self.left = []
         self.done = True
 
         self._blur_image()
@@ -27,6 +35,9 @@ class LaneDetector:
         self._intersection_of_lanes()
         self._get_angle_error()
 
+        if not self.right or not self.left:
+            self.angle = np.mean(self.previous_angles)
+        self.__insert_previous_angle()
         return self.done, self.angle
 
     def _blur_image(self):
@@ -85,8 +96,6 @@ class LaneDetector:
                             (x1, y1), (x2, y2), color, 2)
 
     def _get_lane_candidates(self):
-        self.right = []
-        self.left = []
         self.r_x_points, self.r_y_points = [], []
         self.l_x_points, self.l_y_points = [], []
         for x1, y1, x2, y2 in self.hough_lines[:, 0]:
@@ -109,7 +118,11 @@ class LaneDetector:
         self.__draw_lines(self.left, BLUE)
 
     def __slope(self, x1, y1, x2, y2):
-        return (y1 - y2) / (x1 - x2)
+        if x1 != x2:
+            return (y1 - y2) / (x1 - x2)
+        else:
+            return np.inf
+
 
     def _intersection_of_lanes(self):
         self.r_m, r_c = self.__one_line_linear_regression(self.r_x_points, self.r_y_points)
@@ -134,7 +147,7 @@ class LaneDetector:
     def _get_angle_error(self):
         xsize = self.image_array.shape[1]
         ysize = self.image_array.shape[0]
-        dist_to_baseline = self.intersection_point[0] - xsize/2
+        dist_to_baseline = self.intersection_point[0] - xsize/2  # < 0 when the car have to go left
         dist_to_bottom = ysize - self.intersection_point[1]
         self.angle = np.arctan(dist_to_baseline / dist_to_bottom)
         cv2.line(self.original_image_array, (int(xsize/2), 0), (int(xsize/2), ysize), RED, 1)
