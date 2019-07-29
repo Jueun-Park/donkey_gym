@@ -14,9 +14,9 @@ NUM_EPISODES = 1
 MAX_TIME_STEPS = 10000000
 
 # TODO: hyperparameters
-steer_controller = PID(Kp=-2.4,
+steer_controller = PID(Kp=3.0,
                 Ki=0.0,
-                Kd=0.3,
+                Kd=0.175,
                 output_limits=(-1, 1),
                 )
 base_speed = 1
@@ -35,13 +35,16 @@ def simulate(env):
 
         for t in range(MAX_TIME_STEPS):
             is_okay, angle_error = detector.detect_lane(obv)
+            angle_error = -angle_error
             if not detector.left:
-                print(str(time.time()) + " no left")
+                # print(str(time.time()) + " no left")
+                pass
             elif not detector.right:
-                print(str(time.time()) + " no right")
+                # print(str(time.time()) + " no right")
+                pass
 
             steer = steer_controller(angle_error)
-
+            print(time.time(), "steer:", steer)
             reduction = speed_controller(steer)
             speed = base_speed - np.abs(reduction)
 

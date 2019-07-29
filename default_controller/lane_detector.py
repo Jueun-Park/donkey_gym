@@ -35,7 +35,7 @@ class LaneDetector:
         self._intersection_of_lanes()
         self._get_angle_error()
 
-        add_term = 0.5
+        add_term = 0.5  # TODO: consider previous angles
         if not self.right or not self.left:
             self.angle = np.mean(self.previous_angles)
             if not self.right:
@@ -43,6 +43,7 @@ class LaneDetector:
             if not self.left:
                 self.angle -= add_term
         self.__insert_previous_angle()
+        print("angle:", self.angle)
         return self.done, self.angle
 
     def _blur_image(self):
@@ -98,7 +99,7 @@ class LaneDetector:
                 if x1 == x2 or y1 == y2:
                     continue
                 cv2.line(self.original_image_array,
-                            (x1, y1), (x2, y2), color, 2)
+                         (x1, y1), (x2, y2), color, 2)
 
     def _get_lane_candidates(self):
         self.r_x_points, self.r_y_points = [], []
@@ -129,25 +130,27 @@ class LaneDetector:
         else:
             return np.inf
 
-
     def _intersection_of_lanes(self):
-        self.r_m, r_c = self.__one_line_linear_regression(self.r_x_points, self.r_y_points)
-        self.l_m, l_c = self.__one_line_linear_regression(self.l_x_points, self.l_y_points)
+        self.r_m, r_c = self.__one_line_linear_regression(
+            self.r_x_points, self.r_y_points)
+        self.l_m, l_c = self.__one_line_linear_regression(
+            self.l_x_points, self.l_y_points)
         a = np.array([[-self.r_m, 1], [-self.l_m, 1]])
         b = np.array([r_c, l_c])
         try:
             self.intersection_point = np.linalg.solve(a, b)
-            self.intersection_point = tuple(int(i) for i in self.intersection_point)
+            self.intersection_point = tuple(int(i)
+                                            for i in self.intersection_point)
         except:
             print("exception")
             self.intersection_point = (self.image_array.shape[1]/2, 0)
         if self.intersection_point[0] > 0 and self.intersection_point[1] > 0:
             cv2.circle(img=self.original_image_array,
-                        center=self.intersection_point,
-                        radius=1,
-                        color=GREEN,
-                        thickness=3,
-                        )
+                       center=self.intersection_point,
+                       radius=1,
+                       color=GREEN,
+                       thickness=3,
+                       )
 
     def __one_line_linear_regression(self, x_points, y_points):
         A = np.vstack([x_points, np.ones(len(x_points))]).T
@@ -157,10 +160,12 @@ class LaneDetector:
     def _get_angle_error(self):
         xsize = self.image_array.shape[1]
         ysize = self.image_array.shape[0]
-        dist_to_baseline = self.intersection_point[0] - xsize/2  # < 0 when the car have to go left
+        # < 0 when the car have to go left
+        dist_to_baseline = self.intersection_point[0] - xsize/2
         dist_to_bottom = ysize - self.intersection_point[1]
         self.angle = np.arctan(dist_to_baseline / dist_to_bottom)
-        cv2.line(self.original_image_array, (int(xsize/2), 0), (int(xsize/2), ysize), RED, 1)
+        cv2.line(self.original_image_array, (int(xsize/2), 0),
+                 (int(xsize/2), ysize), RED, 1)
 
 
 if __name__ == "__main__":
