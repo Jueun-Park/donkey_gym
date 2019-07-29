@@ -14,15 +14,15 @@ NUM_EPISODES = 1
 MAX_TIME_STEPS = 10000000
 
 # TODO: hyperparameters
-steer_controller = PID(Kp=-3.0,
+steer_controller = PID(Kp=-2.4,
                 Ki=0.0,
-                Kd=0.0,
+                Kd=0.3,
                 output_limits=(-1, 1),
                 )
-base_speed = 0.5
-speed_controller = PID(Kp=-1.0,
+base_speed = 1
+speed_controller = PID(Kp=1.0,
                 Ki=0.0,
-                Kd=0.0,
+                Kd=0.125,
                 output_limits=(-1, 1),
                 )
 
@@ -39,14 +39,17 @@ def simulate(env):
                 print(str(time.time()) + " no left")
             elif not detector.right:
                 print(str(time.time()) + " no right")
+
             steer = steer_controller(angle_error)
-            speed = speed_controller(np.abs(steer)) + base_speed
+
+            reduction = speed_controller(steer)
+            speed = base_speed - np.abs(reduction)
+
             action = (steer, speed)
             obv, reward, done, _ = env.step(action)
+            
             obv = cv2.cvtColor(obv, cv2.COLOR_RGB2BGR)
-
             cv2.imshow('input', detector.original_image_array)
-            # cv2.imshow('processed', detector.image_array)
             if done:
                 break
             if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -72,7 +75,7 @@ if __name__ == "__main__":
                         help='1 to supress graphics')
     parser.add_argument('--port', type=int, default=9091,
                         help='port to use for websockets')
-    parser.add_argument('--env_name', type=str, default='donkey-generated-roads-v0',
+    parser.add_argument('--env_name', type=str, default='donkey-generated-track-v0',
                         help='name of donkey sim environment', choices=env_list)
 
     args = parser.parse_args()
