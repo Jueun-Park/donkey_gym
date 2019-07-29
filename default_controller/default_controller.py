@@ -19,6 +19,7 @@ steer_controller = PID(Kp=-3.0,
                 Kd=0.0,
                 output_limits=(-1, 1),
                 )
+base_speed = 0.5
 speed_controller = PID(Kp=-1.0,
                 Ki=0.0,
                 Kd=0.0,
@@ -34,9 +35,12 @@ def simulate(env):
 
         for t in range(MAX_TIME_STEPS):
             is_okay, angle_error = detector.detect_lane(obv)
+            if not detector.left:
+                print(str(time.time()) + " no left")
+            elif not detector.right:
+                print(str(time.time()) + " no right")
             steer = steer_controller(angle_error)
-            print(steer)
-            speed = speed_controller(np.abs(steer)) + 0.5
+            speed = speed_controller(np.abs(steer)) + base_speed
             action = (steer, speed)
             obv, reward, done, _ = env.step(action)
             obv = cv2.cvtColor(obv, cv2.COLOR_RGB2BGR)
