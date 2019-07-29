@@ -35,8 +35,13 @@ class LaneDetector:
         self._intersection_of_lanes()
         self._get_angle_error()
 
+        add_term = 0.5
         if not self.right or not self.left:
             self.angle = np.mean(self.previous_angles)
+            if not self.right:
+                self.angle += add_term
+            if not self.left:
+                self.angle -= add_term
         self.__insert_previous_angle()
         return self.done, self.angle
 
@@ -98,16 +103,17 @@ class LaneDetector:
     def _get_lane_candidates(self):
         self.r_x_points, self.r_y_points = [], []
         self.l_x_points, self.l_y_points = [], []
+        horizontal_clip_slope = 0.5
         for x1, y1, x2, y2 in self.hough_lines[:, 0]:
             m = self.__slope(x1, y1, x2, y2)
-            if m >= 0:
+            if m >= horizontal_clip_slope:
                 self.right.append([[x1, y1, x2, y2]])
                 self.r_x_points.append(x1)
                 self.r_x_points.append(x2)
                 self.r_y_points.append(y1)
                 self.r_y_points.append(y2)
 
-            else:
+            elif m < -horizontal_clip_slope:
                 self.left.append([[x1, y1, x2, y2]])
                 self.l_x_points.append(x1)
                 self.l_x_points.append(x2)
@@ -129,8 +135,12 @@ class LaneDetector:
         self.l_m, l_c = self.__one_line_linear_regression(self.l_x_points, self.l_y_points)
         a = np.array([[-self.r_m, 1], [-self.l_m, 1]])
         b = np.array([r_c, l_c])
-        self.intersection_point = np.linalg.solve(a, b)
-        self.intersection_point = tuple(int(i) for i in self.intersection_point)
+        try:
+            self.intersection_point = np.linalg.solve(a, b)
+            self.intersection_point = tuple(int(i) for i in self.intersection_point)
+        except:
+            print("exception")
+            self.intersection_point = (self.image_array.shape[1]/2, 0)
         if self.intersection_point[0] > 0 and self.intersection_point[1] > 0:
             cv2.circle(img=self.original_image_array,
                         center=self.intersection_point,
