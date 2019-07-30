@@ -14,7 +14,7 @@ class LaneDetector:
     def __insert_previous_angle(self):
         max_size = 3
         if len(self.previous_angles) >= max_size:
-            del self.previous_angles[-1]
+            del self.previous_angles[0]
         self.previous_angles.append(self.angle)
 
     def detect_lane(self, image: np.ndarray):
