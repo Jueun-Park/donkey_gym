@@ -15,12 +15,12 @@ NUM_EPISODES = 1
 MAX_TIME_STEPS = 10000000
 
 # TODO: hyperparameters
-steer_controller = PID(Kp=3.0,
+steer_controller = PID(Kp=2.88,
                 Ki=0.0,
-                Kd=0.175,
+                Kd=0.0818,
                 output_limits=(-1, 1),
                 )
-base_speed = 1
+base_speed = 1.1
 speed_controller = PID(Kp=1.0,
                 Ki=0.0,
                 Kd=0.125,
@@ -28,7 +28,6 @@ speed_controller = PID(Kp=1.0,
                 )
 
 def simulate(env):
-    base_time = time.time()
     filename = os.path.dirname(os.path.abspath(__file__)) + "/data/" + "data.csv"
     log_file = open(filename, 'w', encoding='utf-8', newline='')
     log_writer = csv.writer(log_file)
@@ -38,16 +37,15 @@ def simulate(env):
         obv = env.reset()  # TODO: reset delay
         obv = cv2.cvtColor(obv, cv2.COLOR_RGB2BGR)
         steer = 0
+        base_time = time.time()
 
         for t in range(MAX_TIME_STEPS):
             is_okay, angle_error = detector.detect_lane(obv)
             angle_error = -angle_error
             if not detector.left:
-                # print(str(time.time()) + " no left")
-                pass
+                print(str(time.time() - base_time) + " no left")
             elif not detector.right:
-                # print(str(time.time()) + " no right")
-                pass
+                print(str(time.time() - base_time) + " no right")
 
             steer = steer_controller(angle_error)
             reduction = speed_controller(steer)

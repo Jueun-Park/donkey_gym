@@ -12,7 +12,7 @@ class LaneDetector:
         self.previous_angles = []
 
     def __insert_previous_angle(self):
-        max_size = 3
+        max_size = 10
         if len(self.previous_angles) >= max_size:
             del self.previous_angles[0]
         self.previous_angles.append(self.angle)
@@ -35,7 +35,7 @@ class LaneDetector:
         self._intersection_of_lanes()
         self._get_angle_error()
 
-        add_term = 0.5  # TODO: consider previous angles
+        add_term = 0.1  # TODO: consider previous angles
         if not self.right or not self.left:
             self.angle = np.mean(self.previous_angles)
             if not self.right:
@@ -43,7 +43,6 @@ class LaneDetector:
             if not self.left:
                 self.angle -= add_term
         self.__insert_previous_angle()
-        print("angle:", self.angle)
         return self.done, self.angle
 
     def _blur_image(self):
