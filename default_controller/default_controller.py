@@ -1,3 +1,4 @@
+import csv
 import os
 import argparse
 import gym
@@ -27,6 +28,11 @@ speed_controller = PID(Kp=1.0,
                 )
 
 def simulate(env):
+    base_time = time.time()
+    filename = os.path.dirname(os.path.abspath(__file__)) + "/data/" + "data.csv"
+    log_file = open(filename, 'w', encoding='utf-8', newline='')
+    log_writer = csv.writer(log_file)
+    log_writer.writerow(["t", "angle", "steer"])
     detector = LaneDetector()
     for episode in range(NUM_EPISODES):
         obv = env.reset()  # TODO: reset delay
@@ -44,13 +50,13 @@ def simulate(env):
                 pass
 
             steer = steer_controller(angle_error)
-            print(time.time(), "steer:", steer)
             reduction = speed_controller(steer)
             speed = base_speed - np.abs(reduction)
-
             action = (steer, speed)
             obv, reward, done, _ = env.step(action)
             
+            log_writer.writerow([time.time() - base_time, -angle_error, steer])
+
             obv = cv2.cvtColor(obv, cv2.COLOR_RGB2BGR)
             cv2.imshow('input', detector.original_image_array)
             if done:
@@ -78,7 +84,7 @@ if __name__ == "__main__":
                         help='1 to supress graphics')
     parser.add_argument('--port', type=int, default=9091,
                         help='port to use for websockets')
-    parser.add_argument('--env_name', type=str, default='donkey-generated-track-v0',
+    parser.add_argument('--env_name', type=str, default='donkey-generated-roads-v0',
                         help='name of donkey sim environment', choices=env_list)
 
     args = parser.parse_args()
